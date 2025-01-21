@@ -1,11 +1,11 @@
 import sys
-from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QLineEdit, QRadioButton, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QGroupBox, QGridLayout)
+from PyQt6.QtWidgets import (QApplication, QMainWindow, QLabel, QLineEdit, QRadioButton, QPushButton, QVBoxLayout, QHBoxLayout, QWidget, QGroupBox, QGridLayout, QTextEdit)
 
 class BodyFatCalculator(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Body Fat Calculator")
-        self.setGeometry(100, 100, 600, 400)
+        self.setGeometry(100, 100, 600, 600)
 
         # Main layout
         main_layout = QVBoxLayout()
@@ -48,6 +48,17 @@ class BodyFatCalculator(QMainWindow):
         self.waist_input = QLineEdit()
         input_layout.addWidget(self.waist_input, 5, 1)
 
+        # Hip (only for females)
+        self.hip_label = QLabel("Hip (cm):")
+        self.hip_input = QLineEdit()
+        input_layout.addWidget(self.hip_label, 6, 0)
+        input_layout.addWidget(self.hip_input, 6, 1)
+        self.hip_label.setVisible(False)
+        self.hip_input.setVisible(False)
+
+        # Toggle hip visibility based on gender
+        self.female_radio.toggled.connect(self.toggle_hip_input)
+
         input_group.setLayout(input_layout)
         main_layout.addWidget(input_group)
 
@@ -57,13 +68,19 @@ class BodyFatCalculator(QMainWindow):
         main_layout.addWidget(self.calculate_button)
 
         # Result display
-        self.result_label = QLabel("Results will be displayed here.")
-        main_layout.addWidget(self.result_label)
+        self.result_text = QTextEdit()
+        self.result_text.setReadOnly(True)
+        main_layout.addWidget(self.result_text)
 
         # Central widget
         container = QWidget()
         container.setLayout(main_layout)
         self.setCentralWidget(container)
+
+    def toggle_hip_input(self):
+        is_female = self.female_radio.isChecked()
+        self.hip_label.setVisible(is_female)
+        self.hip_input.setVisible(is_female)
 
     def calculate_body_fat(self):
         try:
@@ -73,18 +90,35 @@ class BodyFatCalculator(QMainWindow):
             height = float(self.height_input.text())
             neck = float(self.neck_input.text())
             waist = float(self.waist_input.text())
+            hip = float(self.hip_input.text()) if gender == "female" else 0
 
             if gender == "male":
                 # U.S. Navy Method for males
                 body_fat = 495 / (1.0324 - 0.19077 * (waist - neck) / height + 0.15456 * height / 100) - 450
             else:
-                # U.S. Navy Method for females (not considering hip for simplicity)
-                body_fat = 495 / (1.29579 - 0.35004 * (waist - neck) / height + 0.221 * height / 100) - 450
+                # U.S. Navy Method for females
+                body_fat = 495 / (1.29579 - 0.35004 * (waist + hip - neck) / height + 0.221 * height / 100) - 450
 
             body_fat = round(body_fat, 1)
-            self.result_label.setText(f"Body Fat: {body_fat}%")
+
+            # Additional calculations
+            fat_mass = round(weight * body_fat / 100, 1)
+            lean_mass = round(weight - fat_mass, 1)
+            ideal_body_fat = 10.5 if gender == "male" else 18.0
+            fat_to_lose = round(weight * (body_fat - ideal_body_fat) / 100, 1) if body_fat > ideal_body_fat else 0
+
+            # Display results
+            results = f"""
+Body Fat: {body_fat}%
+Body Fat Category: {'Essential' if body_fat <= 5 else 'Athletes' if body_fat <= 13 else 'Fitness' if body_fat <= 17 else 'Average' if body_fat <= 25 else 'Obese'}
+Body Fat Mass: {fat_mass} kg
+Lean Body Mass: {lean_mass} kg
+Ideal Body Fat for Given Age: {ideal_body_fat}%
+Body Fat to Lose to Reach Ideal: {fat_to_lose} kg
+"""
+            self.result_text.setText(results)
         except Exception as e:
-            self.result_label.setText(f"Error: {e}")
+            self.result_text.setText(f"Error: {e}")
 
 if __name__ == "__main__":
     app = QApplication(sys.argv)
