@@ -3,6 +3,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QVBoxLayout, QWidget, QComboBox, QGridLayout
 )
 from PyQt6.QtCore import Qt
+import math
 
 
 class BodyFatCalculator(QMainWindow):
@@ -114,7 +115,6 @@ class BodyFatCalculator(QMainWindow):
             neck = float(self.neck_input.text())
             waist = float(self.waist_input.text())
             hip = float(self.hip_input.text()) if self.female_radio.isChecked() else 0
-            age = int(self.age_input.text())
             is_metric = self.units_combo.currentText() == "Metric"
 
             # Convertir a unidades métricas si es necesario
@@ -128,44 +128,21 @@ class BodyFatCalculator(QMainWindow):
 
             # Calcular porcentaje de grasa corporal
             if self.male_radio.isChecked():
-                body_fat = 495 / (1.0324 - 0.19077 * (waist - neck) / height + 0.15456 * height) - 450
+                body_fat = 495 / (1.0324 - 0.19077 * math.log10(waist - neck) + 0.15456 * math.log10(height)) - 450
             else:
-                body_fat = 495 / (1.29579 - 0.35004 * (waist + hip - neck) / height + 0.22100 * height) - 450
+                body_fat = 495 / (1.29579 - 0.35004 * math.log10(waist + hip - neck) + 0.221 * math.log10(height)) - 450
 
-            # Categoría de grasa corporal
-            if body_fat < 6:
-                category = "Essential"
-            elif body_fat < 14:
-                category = "Athletes"
-            elif body_fat < 18:
-                category = "Fitness"
-            elif body_fat < 25:
-                category = "Average"
-            else:
-                category = "Obese"
-
-            # Masa de grasa y masa magra
             body_fat_mass = weight * (body_fat / 100)
             lean_body_mass = weight - body_fat_mass
 
-            # Grasa ideal según edad y género
-            if self.male_radio.isChecked():
-                ideal_body_fat = 8 + 0.1 * age
-            else:
-                ideal_body_fat = 20 + 0.1 * age
+            # Categoría de grasa corporal
+            category = self.get_category(body_fat, self.male_radio.isChecked())
 
-            fat_to_lose = body_fat_mass - (weight * (ideal_body_fat / 100))
-            fat_bmi_method = 1.2 * (weight / ((height / 100) ** 2)) + 0.23 * age - (10.8 if self.male_radio.isChecked() else 0) - 5.4
-
-            # Mostrar resultados
             self.result_output.setText(
                 f"Body Fat: {body_fat:.1f}%\n"
                 f"Category: {category}\n"
                 f"Body Fat Mass: {body_fat_mass:.1f} kg\n"
-                f"Lean Body Mass: {lean_body_mass:.1f} kg\n"
-                f"Ideal Body Fat: {ideal_body_fat:.1f}%\n"
-                f"Fat to Lose: {fat_to_lose:.1f} kg\n"
-                f"Body Fat (BMI Method): {fat_bmi_method:.1f}%"
+                f"Lean Body Mass: {lean_body_mass:.1f} kg"
             )
         except ValueError:
             self.result_output.setText("Invalid input. Please enter valid numbers.")
@@ -179,6 +156,30 @@ class BodyFatCalculator(QMainWindow):
         self.waist_input.clear()
         self.hip_input.clear()
         self.result_output.clear()
+
+    def get_category(self, body_fat, is_male):
+        if is_male:
+            if body_fat < 6:
+                return "Essential Fat"
+            elif body_fat < 14:
+                return "Athletes"
+            elif body_fat < 18:
+                return "Fitness"
+            elif body_fat < 25:
+                return "Average"
+            else:
+                return "Obese"
+        else:
+            if body_fat < 13:
+                return "Essential Fat"
+            elif body_fat < 20:
+                return "Athletes"
+            elif body_fat < 24:
+                return "Fitness"
+            elif body_fat < 31:
+                return "Average"
+            else:
+                return "Obese"
 
 
 app = QApplication([])
