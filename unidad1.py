@@ -1,216 +1,187 @@
-import sys
 from PyQt6.QtWidgets import (
-    QApplication, QMainWindow, QVBoxLayout, QHBoxLayout, QWidget,
-    QLabel, QLineEdit, QRadioButton, QPushButton, QButtonGroup, QComboBox, QMessageBox
+    QApplication, QMainWindow, QLabel, QLineEdit, QRadioButton,
+    QPushButton, QVBoxLayout, QWidget, QComboBox, QGridLayout
 )
+from PyQt6.QtCore import Qt
+
 
 class BodyFatCalculator(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Body Fat Calculator")
 
-        # Main layout
-        self.main_layout = QVBoxLayout()
+        # Layout principal
+        layout = QGridLayout()
 
-        # Unit selection
-        self.unit_selector = QComboBox()
-        self.unit_selector.addItems(["Metric Units", "US Units"])
-        self.unit_selector.currentIndexChanged.connect(self.update_units)
-        self.main_layout.addWidget(self.unit_selector)
+        # Inputs básicos
+        self.gender_label = QLabel("Gender:")
+        self.male_radio = QRadioButton("Male")
+        self.female_radio = QRadioButton("Female")
+        self.male_radio.setChecked(True)
+        self.male_radio.toggled.connect(self.toggle_gender)
 
-        # Input fields
-        self.input_layout = QVBoxLayout()
-        self.gender_group = QButtonGroup()
+        self.age_label = QLabel("Age:")
+        self.age_input = QLineEdit()
 
-        self.male_button = QRadioButton("Male")
-        self.female_button = QRadioButton("Female")
-        self.gender_group.addButton(self.male_button)
-        self.gender_group.addButton(self.female_button)
+        self.weight_label = QLabel("Weight (kg):")
+        self.weight_input = QLineEdit()
 
-        gender_layout = QHBoxLayout()
-        gender_layout.addWidget(QLabel("Gender:"))
-        gender_layout.addWidget(self.male_button)
-        gender_layout.addWidget(self.female_button)
-        self.input_layout.addLayout(gender_layout)
+        self.height_label = QLabel("Height (cm):")
+        self.height_input = QLineEdit()
 
-        # Input fields with labels
-        self.age_input = self.create_input_field("Age:")
-        self.weight_input = self.create_input_field("Weight:")
-        self.height_input = self.create_input_field("Height:")
-        self.neck_input = self.create_input_field("Neck:")
-        self.waist_input = self.create_input_field("Waist:")
-        self.hip_input = self.create_input_field("Hip (females only):")
+        self.neck_label = QLabel("Neck (cm):")
+        self.neck_input = QLineEdit()
+
+        self.waist_label = QLabel("Waist (cm):")
+        self.waist_input = QLineEdit()
+
+        self.hip_label = QLabel("Hip (cm):")  # Solo para mujeres
+        self.hip_input = QLineEdit()
+        self.hip_label.setVisible(False)
         self.hip_input.setVisible(False)
 
-        self.female_button.toggled.connect(self.toggle_hip_input)
+        # Sistema de unidades
+        self.units_label = QLabel("Units:")
+        self.units_combo = QComboBox()
+        self.units_combo.addItems(["Metric", "US"])
+        self.units_combo.currentIndexChanged.connect(self.update_units)
 
-        self.main_layout.addLayout(self.input_layout)
-
-        # Calculate button
+        # Botones
         self.calculate_button = QPushButton("Calculate")
-        self.calculate_button.clicked.connect(self.calculate_body_fat)
-        self.main_layout.addWidget(self.calculate_button)
+        self.calculate_button.clicked.connect(self.calculate)
 
-        # Results area
-        self.results_label = QLabel("")
-        self.main_layout.addWidget(self.results_label)
+        self.clear_button = QPushButton("Clear")
+        self.clear_button.clicked.connect(self.clear_inputs)
 
-        # Central widget
-        central_widget = QWidget()
-        central_widget.setLayout(self.main_layout)
-        self.setCentralWidget(central_widget)
+        # Resultados
+        self.result_label = QLabel("Results:")
+        self.result_output = QLabel("")
 
-        # Default settings
-        self.male_button.setChecked(True)
-        self.update_units()
+        # Añadiendo al layout
+        layout.addWidget(self.gender_label, 0, 0)
+        layout.addWidget(self.male_radio, 0, 1)
+        layout.addWidget(self.female_radio, 0, 2)
+        layout.addWidget(self.age_label, 1, 0)
+        layout.addWidget(self.age_input, 1, 1, 1, 2)
+        layout.addWidget(self.weight_label, 2, 0)
+        layout.addWidget(self.weight_input, 2, 1, 1, 2)
+        layout.addWidget(self.height_label, 3, 0)
+        layout.addWidget(self.height_input, 3, 1, 1, 2)
+        layout.addWidget(self.neck_label, 4, 0)
+        layout.addWidget(self.neck_input, 4, 1, 1, 2)
+        layout.addWidget(self.waist_label, 5, 0)
+        layout.addWidget(self.waist_input, 5, 1, 1, 2)
+        layout.addWidget(self.hip_label, 6, 0)
+        layout.addWidget(self.hip_input, 6, 1, 1, 2)
+        layout.addWidget(self.units_label, 7, 0)
+        layout.addWidget(self.units_combo, 7, 1, 1, 2)
+        layout.addWidget(self.calculate_button, 8, 0)
+        layout.addWidget(self.clear_button, 8, 1)
+        layout.addWidget(self.result_label, 9, 0)
+        layout.addWidget(self.result_output, 9, 1, 1, 2)
 
-    def create_input_field(self, label_text):
-        layout = QHBoxLayout()
-        label = QLabel(label_text)
-        input_field = QLineEdit()
-        layout.addWidget(label)
-        layout.addWidget(input_field)
-        self.input_layout.addLayout(layout)
-        return input_field
+        # Configuración del widget principal
+        container = QWidget()
+        container.setLayout(layout)
+        self.setCentralWidget(container)
 
-    def toggle_hip_input(self):
-        self.hip_input.setVisible(self.female_button.isChecked())
+    def toggle_gender(self):
+        # Mostrar o esconder el campo de "Hip" dependiendo del género
+        is_female = self.female_radio.isChecked()
+        self.hip_label.setVisible(is_female)
+        self.hip_input.setVisible(is_female)
 
     def update_units(self):
-        if self.unit_selector.currentText() == "Metric Units":
-            self.weight_input.setPlaceholderText("kg")
-            self.height_input.setPlaceholderText("cm")
-            self.neck_input.setPlaceholderText("cm")
-            self.waist_input.setPlaceholderText("cm")
-            self.hip_input.setPlaceholderText("cm")
-
-            self.weight_input.setText("")
-            self.height_input.setText("")
-            self.neck_input.setText("")
-            self.waist_input.setText("")
-            self.hip_input.setText("")
+        # Cambiar etiquetas según las unidades seleccionadas
+        if self.units_combo.currentText() == "Metric":
+            self.weight_label.setText("Weight (kg):")
+            self.height_label.setText("Height (cm):")
+            self.neck_label.setText("Neck (cm):")
+            self.waist_label.setText("Waist (cm):")
+            self.hip_label.setText("Hip (cm):")
         else:
-            self.weight_input.setPlaceholderText("lbs")
-            self.height_input.setPlaceholderText("in")
-            self.neck_input.setPlaceholderText("in")
-            self.waist_input.setPlaceholderText("in")
-            self.hip_input.setPlaceholderText("in")
+            self.weight_label.setText("Weight (lb):")
+            self.height_label.setText("Height (in):")
+            self.neck_label.setText("Neck (in):")
+            self.waist_label.setText("Waist (in):")
+            self.hip_label.setText("Hip (in):")
 
-            self.weight_input.setText("")
-            self.height_input.setText("")
-            self.neck_input.setText("")
-            self.waist_input.setText("")
-            self.hip_input.setText("")
-
-    def calculate_body_fat(self):
+    def calculate(self):
         try:
-            # Get inputs
-            gender = "male" if self.male_button.isChecked() else "female"
-            age = int(self.age_input.text())
+            # Entradas básicas
             weight = float(self.weight_input.text())
             height = float(self.height_input.text())
             neck = float(self.neck_input.text())
             waist = float(self.waist_input.text())
-            hip = float(self.hip_input.text()) if gender == "female" else 0
+            hip = float(self.hip_input.text()) if self.female_radio.isChecked() else 0
+            age = int(self.age_input.text())
+            is_metric = self.units_combo.currentText() == "Metric"
 
-            if self.unit_selector.currentText() == "US Units":
-                # Convert US to Metric
-                weight = weight * 0.453592  # lbs to kg
-                height = height * 2.54  # in to cm
-                neck = neck * 2.54
-                waist = waist * 2.54
-                hip = hip * 2.54
+            # Convertir a unidades métricas si es necesario
+            if not is_metric:
+                weight *= 0.453592  # lb a kg
+                height *= 2.54  # in a cm
+                neck *= 2.54
+                waist *= 2.54
+                if hip:
+                    hip *= 2.54
 
-            # Body fat calculation (US Navy Method)
-            if gender == "male":
-                bfp = 86.010 * (waist - neck) / height - 70.041 * (height / 100) + 36.76
+            # Calcular porcentaje de grasa corporal
+            if self.male_radio.isChecked():
+                body_fat = 495 / (1.0324 - 0.19077 * (waist - neck) / height + 0.15456 * height) - 450
             else:
-                bfp = 163.205 * (waist + hip - neck) / height - 97.684 * (height / 100) - 78.387
+                body_fat = 495 / (1.29579 - 0.35004 * (waist + hip - neck) / height + 0.22100 * height) - 450
 
-            # Ideal body fat based on age
-            if gender == "male":
-                if age <= 20:
-                    ideal_body_fat = 8.5
-                elif age <= 25:
-                    ideal_body_fat = 10.5
-                elif age <= 30:
-                    ideal_body_fat = 12.7
-                elif age <= 35:
-                    ideal_body_fat = 13.7
-                elif age <= 40:
-                    ideal_body_fat = 15.3
-                elif age <= 45:
-                    ideal_body_fat = 16.4
-                elif age <= 50:
-                    ideal_body_fat = 18.9
-                else:
-                    ideal_body_fat = 20.9
+            # Categoría de grasa corporal
+            if body_fat < 6:
+                category = "Essential"
+            elif body_fat < 14:
+                category = "Athletes"
+            elif body_fat < 18:
+                category = "Fitness"
+            elif body_fat < 25:
+                category = "Average"
             else:
-                if age <= 20:
-                    ideal_body_fat = 17.7
-                elif age <= 25:
-                    ideal_body_fat = 18.4
-                elif age <= 30:
-                    ideal_body_fat = 19.3
-                elif age <= 35:
-                    ideal_body_fat = 21.5
-                elif age <= 40:
-                    ideal_body_fat = 22.2
-                elif age <= 45:
-                    ideal_body_fat = 22.9
-                elif age <= 50:
-                    ideal_body_fat = 25.2
-                else:
-                    ideal_body_fat = 26.3
+                category = "Obese"
 
-            lean_body_mass = weight * (1 - bfp / 100)
-            fat_mass = weight * bfp / 100
-            fat_to_lose = max(0, (bfp - ideal_body_fat) / 100 * weight)
+            # Masa de grasa y masa magra
+            body_fat_mass = weight * (body_fat / 100)
+            lean_body_mass = weight - body_fat_mass
 
-            # BMI Body Fat Estimate
-            height_m = height / 100
-            bmi = weight / (height_m ** 2)
-            bmi_body_fat = (1.20 * bmi) + (0.23 * age) - (10.8 if gender == "male" else 0) - 5.4
-
-            # Body Fat Category
-            if gender == "male":
-                if bfp < 6:
-                    category = "Essential Fat"
-                elif bfp < 14:
-                    category = "Athletes"
-                elif bfp < 18:
-                    category = "Fitness"
-                elif bfp < 25:
-                    category = "Average"
-                else:
-                    category = "Obese"
+            # Grasa ideal según edad y género
+            if self.male_radio.isChecked():
+                ideal_body_fat = 8 + 0.1 * age
             else:
-                if bfp < 14:
-                    category = "Essential Fat"
-                elif bfp < 21:
-                    category = "Athletes"
-                elif bfp < 25:
-                    category = "Fitness"
-                elif bfp < 32:
-                    category = "Average"
-                else:
-                    category = "Obese"
+                ideal_body_fat = 20 + 0.1 * age
 
-            # Update results
-            self.results_label.setText(
-                f"Body Fat (U.S. Navy Method): {bfp:.1f}%\n"
-                f"Body Fat Category: {category}\n"
-                f"Body Fat Mass: {fat_mass:.1f} kg\n"
+            fat_to_lose = body_fat_mass - (weight * (ideal_body_fat / 100))
+            fat_bmi_method = 1.2 * (weight / ((height / 100) ** 2)) + 0.23 * age - (10.8 if self.male_radio.isChecked() else 0) - 5.4
+
+            # Mostrar resultados
+            self.result_output.setText(
+                f"Body Fat: {body_fat:.1f}%\n"
+                f"Category: {category}\n"
+                f"Body Fat Mass: {body_fat_mass:.1f} kg\n"
                 f"Lean Body Mass: {lean_body_mass:.1f} kg\n"
-                f"Ideal Body Fat for Given Age: {ideal_body_fat}%\n"
-                f"Body Fat to Lose to Reach Ideal: {fat_to_lose:.1f} kg\n"
-                f"Body Fat (BMI method): {bmi_body_fat:.1f}%"
+                f"Ideal Body Fat: {ideal_body_fat:.1f}%\n"
+                f"Fat to Lose: {fat_to_lose:.1f} kg\n"
+                f"Body Fat (BMI Method): {fat_bmi_method:.1f}%"
             )
         except ValueError:
-            QMessageBox.warning(self, "Input Error", "Please enter valid numbers for all fields.")
+            self.result_output.setText("Invalid input. Please enter valid numbers.")
 
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    window = BodyFatCalculator()
-    window.show()
-    sys.exit(app.exec())
+    def clear_inputs(self):
+        # Limpiar campos de entrada y resultado
+        self.age_input.clear()
+        self.weight_input.clear()
+        self.height_input.clear()
+        self.neck_input.clear()
+        self.waist_input.clear()
+        self.hip_input.clear()
+        self.result_output.clear()
+
+
+app = QApplication([])
+window = BodyFatCalculator()
+window.show()
+app.exec()
