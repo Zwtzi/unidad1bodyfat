@@ -3,8 +3,8 @@ from PyQt6.QtWidgets import (
     QPushButton, QVBoxLayout, QWidget, QComboBox, QGridLayout
 )
 from PyQt6.QtCore import Qt
+import matplotlib.pyplot as plt
 import math
-
 
 class BodyFatCalculator(QMainWindow):
     def __init__(self):
@@ -126,7 +126,7 @@ class BodyFatCalculator(QMainWindow):
                 if hip:
                     hip *= 2.54
 
-            # Calcular porcentaje de grasa corporal
+            # Calcular porcentaje de grasa corporal (Método US Navy)
             if self.male_radio.isChecked():
                 body_fat = 495 / (1.0324 - 0.19077 * math.log10(waist - neck) + 0.15456 * math.log10(height)) - 450
             else:
@@ -135,17 +135,50 @@ class BodyFatCalculator(QMainWindow):
             body_fat_mass = weight * (body_fat / 100)
             lean_body_mass = weight - body_fat_mass
 
+            # Body Fat (BMI method)
+            bmi = weight / ((height / 100) ** 2)
+            if self.male_radio.isChecked():
+                bmi_body_fat = 1.20 * bmi + 0.23 * int(self.age_input.text()) - 16.2
+            else:
+                bmi_body_fat = 1.20 * bmi + 0.23 * int(self.age_input.text()) - 5.4
+
+            # Ideal Body Fat y cantidad a perder (Jackson & Pollock)
+            ideal_body_fat = 10.5 if self.male_radio.isChecked() else 18.4
+            fat_to_lose = (body_fat - ideal_body_fat) / 100 * weight
+
             # Categoría de grasa corporal
             category = self.get_category(body_fat, self.male_radio.isChecked())
 
+            # Mostrar resultados
             self.result_output.setText(
-                f"Body Fat: {body_fat:.1f}%\n"
-                f"Category: {category}\n"
+                f"Body Fat (U.S. Navy Method): {body_fat:.1f}%\n"
+                f"Body Fat Category: {category}\n"
                 f"Body Fat Mass: {body_fat_mass:.1f} kg\n"
-                f"Lean Body Mass: {lean_body_mass:.1f} kg"
+                f"Lean Body Mass: {lean_body_mass:.1f} kg\n"
+                f"Ideal Body Fat for Given Age (Jackson & Pollock): {ideal_body_fat:.1f}%\n"
+                f"Body Fat to Lose to Reach Ideal: {fat_to_lose:.1f} kg\n"
+                f"Body Fat (BMI method): {bmi_body_fat:.1f}%"
             )
+
+            # Generar gráfica
+            self.show_graph(body_fat)
+
         except ValueError:
             self.result_output.setText("Invalid input. Please enter valid numbers.")
+
+    def show_graph(self, body_fat):
+        categories = ["Essential", "Athletes", "Fitness", "Average", "Obese"]
+        male_limits = [6, 14, 18, 25, 30]
+        female_limits = [13, 20, 24, 31, 36]
+        limits = male_limits if self.male_radio.isChecked() else female_limits
+
+        plt.figure(figsize=(6, 2))
+        plt.bar(categories, limits, color=['blue', 'green', 'yellow', 'orange', 'red'], alpha=0.5)
+        plt.axhline(y=body_fat, color='black', linestyle='--')
+        plt.text(2, body_fat + 1, f"{body_fat:.1f}%", color='black', ha='center')
+        plt.title("Body Fat Distribution")
+        plt.ylabel("% Body Fat")
+        plt.show()
 
     def clear_inputs(self):
         # Limpiar campos de entrada y resultado
@@ -181,8 +214,8 @@ class BodyFatCalculator(QMainWindow):
             else:
                 return "Obese"
 
-
 app = QApplication([])
 window = BodyFatCalculator()
 window.show()
 app.exec()
+
