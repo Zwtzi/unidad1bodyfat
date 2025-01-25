@@ -3,7 +3,7 @@ from PyQt6.QtWidgets import (
     QPushButton, QVBoxLayout, QWidget, QComboBox, QGridLayout
 )
 from PyQt6.QtCore import Qt
-from PyQt6.QtGui import QPixmap, QPainter, QColor
+from PyQt6.QtGui import QPixmap
 from PIL.ImageQt import ImageQt
 
 import math
@@ -113,10 +113,32 @@ class BodyFatCalculator(QMainWindow):
             self.hip_label.setText("Hip (cm):")
         else:
             self.weight_label.setText("Weight (lb):")
-            self.height_label.setText("Height (in):")
+            self.height_label.setText("Height (ft/in):")
             self.neck_label.setText("Neck (in):")
             self.waist_label.setText("Waist (in):")
             self.hip_label.setText("Hip (in):")
+
+            # Convertir los valores actuales a unidades US si es necesario
+            try:
+                if self.weight_input.text():
+                    weight_kg = float(self.weight_input.text())
+                    self.weight_input.setText(f"{weight_kg / 0.453592:.1f}")
+                if self.height_input.text():
+                    height_cm = float(self.height_input.text())
+                    height_ft = int(height_cm // 30.48)
+                    height_in = (height_cm % 30.48) / 2.54
+                    self.height_input.setText(f"{height_ft} ft {height_in:.1f} in")
+                if self.neck_input.text():
+                    neck_cm = float(self.neck_input.text())
+                    self.neck_input.setText(f"{neck_cm / 2.54:.1f}")
+                if self.waist_input.text():
+                    waist_cm = float(self.waist_input.text())
+                    self.waist_input.setText(f"{waist_cm / 2.54:.1f}")
+                if self.hip_input.text():
+                    hip_cm = float(self.hip_input.text())
+                    self.hip_input.setText(f"{hip_cm / 2.54:.1f}")
+            except ValueError:
+                pass  # Ignorar errores si los campos están vacíos o contienen datos no válidos
 
     def calculate(self):
         try:
@@ -256,4 +278,3 @@ app = QApplication([])
 window = BodyFatCalculator()
 window.show()
 app.exec()
-
