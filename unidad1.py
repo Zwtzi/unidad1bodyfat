@@ -214,23 +214,33 @@ class BodyFatCalculator(QMainWindow):
                 return "Obese"
 
     def generate_graph(self, body_fat):
-        categories = ["Essential", "Athletes", "Fitness", "Average", "Obese"]
-        ranges = [2, 6, 14, 18, 25]
-        colors = ["#00ccff", "#33ff99", "#ffff66", "#ff9966", "#ff3300"]
+    # Configurar categorías y rangos según el género
+        if self.male_radio.isChecked():
+            categories = ["Essential", "Athletes", "Fitness", "Average", "Obese"]
+            ranges = [6, 14, 18, 25, 40]  # Rango máximo como referencia para hombres
+            colors = ["#00ccff", "#33ff99", "#ffff66", "#ff9966", "#ff3300"]
+        else:
+            categories = ["Essential", "Athletes", "Fitness", "Average", "Obese"]
+            ranges = [14, 21, 25, 32, 50]  # Rango máximo como referencia para mujeres
+            colors = ["#00ccff", "#33ff99", "#ffff66", "#ff9966", "#ff3300"]
 
-        fig, ax = plt.subplots(figsize=(5, 1))
+        # Crear la gráfica horizontal
+        fig, ax = plt.subplots(figsize=(6, 1))
         start = 0
 
+        # Dibujar las barras con los rangos de grasa corporal
         for i, range_val in enumerate(ranges):
             ax.barh(0, range_val - start, left=start, color=colors[i], edgecolor="black")
             start = range_val
 
+        # Línea para el porcentaje de grasa corporal calculado
         ax.axvline(body_fat, color="black", linestyle="--", label=f"{body_fat:.1f}%")
         ax.set_yticks([])
         ax.set_xticks(ranges)
         ax.set_xticklabels(categories)
         ax.legend()
 
+        # Convertir la gráfica en una imagen y mostrarla en la interfaz
         buf = io.BytesIO()
         plt.savefig(buf, format="png", bbox_inches="tight")
         buf.seek(0)
@@ -239,6 +249,7 @@ class BodyFatCalculator(QMainWindow):
         qt_img = QPixmap.fromImage(ImageQt(img))
         self.graph_label.setPixmap(qt_img)
         buf.close()
+
 
 
 app = QApplication([])
